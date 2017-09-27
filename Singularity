@@ -240,7 +240,7 @@ python/quality_score_filter.py bin/quality_score_filter.py
     p_value="${CARRIERSEQ_PVALUE:-0.0001}"
     output_folder="${SINGULARITY_APPDATA}"
     ChannelsInUse="$output_folder/06_poisson_calculation/03_channels_in_use.txt"
-    TotalROIs="$APPROOT_mapping/05_reads_of_interest/carrierseq_roi.txt"
+    TotalROIs="$APPDATA_mapping/05_reads_of_interest/carrierseq_roi.txt"
     LambdaValue="$output_folder/06_poisson_calculation/04_lambda_value.txt"
     ROIChannels="$output_folder/06_poisson_calculation/08_roi_channels_clean.lst"
     XCrit="$output_folder/06_poisson_calculation/06_xcrit_threshold_for_dictionary_search.txt"
@@ -261,6 +261,7 @@ python/frequency_calc.py bin/frequency_calc.py
     # 06 grep - extract all channels used, delete duplicates to count unique (n/512) channels used
     echo 'Counting total channels in use...'
     grep -Eo '_ch[0-9]+_|ch=[0-9]+' $all_reads > $output_folder/06_poisson_calculation/01_reads_channels.lst
+
     awk '!seen[$0]++' $output_folder/06_poisson_calculation/01_reads_channels.lst > $output_folder/06_poisson_calculation/02_channels_used.lst
 
     # 06.01 - count unique channels (n/512)
@@ -273,19 +274,19 @@ python/frequency_calc.py bin/frequency_calc.py
     python ${SINGULARITY_APPROOT}/bin/calculate_lambda.py $TotalROIs $ChannelsInUse > $output_folder/06_poisson_calculation/04_lambda_value.txt
 
     # 06.02.1 python - calculate x_critical
-    python xcrit.py $LambdaValue $p_value > $output_folder/06_poisson_calculation/05_read_channel_threshold.txt
+    python ${SINGULARITY_APPROOT}/bin/xcrit.py $LambdaValue $p_value > $output_folder/06_poisson_calculation/05_read_channel_threshold.txt
     sed -n 6p $output_folder/06_poisson_calculation/05_read_channel_threshold.txt > $output_folder/06_poisson_calculation/06_xcrit_threshold_for_dictionary_search.txt
     cat $output_folder/06_poisson_calculation/05_read_channel_threshold.txt
 
     # 06.03 grep - get channel list from carrierseq_roi.fasta (now compatible with poretools and albacore fastqs)
     echo 'Extracting read IDs and channels from reads of interest....'
-    grep -Eo '_ch[0-9]+_' $APPROOT_mapping/05_reads_of_interest/carrierseq_roi.fasta | sed 's/_//g' | sed 's/ch//g' >  $output_folder/06_poisson_calculation/07_poretools_roi_channels.lst # Get Channel List from poretools output
+    grep -Eo '_ch[0-9]+_' $APPDATA_mapping/05_reads_of_interest/carrierseq_roi.fasta | sed 's/_//g' | sed 's/ch//g' >  $output_folder/06_poisson_calculation/07_poretools_roi_channels.lst # Get Channel List from poretools output
     awk 'NR % 2 == 0' $output_folder/06_poisson_calculation/07_poretools_roi_channels.lst | sed 's/_//g' | sed 's/ch//g' > $output_folder/06_poisson_calculation/08_roi_channels_clean.lst # Remove duplicate channels from poretools fastq
-    grep -Eo 'ch=[0-9]+' $APPROOT_mapping/05_reads_of_interest/carrierseq_roi.fasta | sed 's/ch=//g' >> $output_folder/06_poisson_calculation/08_roi_channels_clean.lst # Get channel list from albacore fastq
+    grep -Eo 'ch=[0-9]+' $APPDATA_mapping/05_reads_of_interest/carrierseq_roi.fasta | sed 's/ch=//g' >> $output_folder/06_poisson_calculation/08_roi_channels_clean.lst # Get channel list from albacore fastq
 
     # 06.03 pyton - Calculate Frequency and create channel dictionary
     echo Creating channel frequency dictionaries...
-    python frequency_calc.py $ROIChannels $XCrit $output_folder/06_poisson_calculation/xx_roi_channel_dictionary.txt $output_folder/06_poisson_calculation/xx_hqnr_channel_dictionary.txt $output_folder/06_poisson_calculation/xx_target_channel_dictionary.txt $output_folder/06_poisson_calculation/09_target_channels.lst
+    python ${SINGULARITY_APPROOT}/bin/frequency_calc.py $ROIChannels $XCrit $output_folder/06_poisson_calculation/xx_roi_channel_dictionary.txt $output_folder/06_poisson_calculation/xx_hqnr_channel_dictionary.txt $output_folder/06_poisson_calculation/xx_target_channel_dictionary.txt $output_folder/06_poisson_calculation/09_target_channels.lst
     echo Poisson caculation complete! Files saved to 06_poisson_calculation.
 
 %appenv sorting
